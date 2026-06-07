@@ -1,0 +1,23 @@
+# 策略参数 — 美股纯多头横截面动量
+universe: SP500              # 起步S&P500,后续可扩到SP1500
+lookback_months: 12         # 12-1动量
+skip_recent_months: 1       # 剔除最近1个月(规避短期反转)
+n_holdings: 15              # 初期小资金固定15只(等权)
+weighting: equal
+rebalance: monthly          # 月末信号,次日开盘执行
+
+regime_filter:
+  benchmark: SPY
+  ma_window: 200            # 200日均线趋势刹车
+  below_ma_exposure: 0.5    # 跌破200日均线时目标仓位
+
+ramp_in_tranches: 3         # 冷启动分批建仓批次
+
+liquidity:
+  min_adv_usd: 5000000      # 20日平均成交额下限
+  min_price: 5
+
+execution:
+  signal_price: close       # 月末收盘价算信号
+  fill_price: next_open     # 次日开盘MOO执行
+  total_return: true        # 复权/总收益口径

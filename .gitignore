@@ -1,0 +1,21 @@
+# secrets
+config/secrets.env
+*.env
+!config/secrets.example.env
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# data & outputs
+data/cache/
+reports/
+logs/
+*.sqlite
+*.db
+*.log
+# uv.lock is committed for reproducibility (do not ignore)
