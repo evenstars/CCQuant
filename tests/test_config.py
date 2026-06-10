@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from ccquant.utils.config import (
+    AccountConfig,
     RiskConfig,
     StrategyConfig,
     load_config,
@@ -28,6 +29,24 @@ def test_load_config_from_yaml() -> None:
     # secrets default (no secrets.env present -> model defaults apply)
     assert cfg.secrets.ib_port == 4002
     assert cfg.secrets.ib_host == "127.0.0.1"
+
+
+def test_account_switch_drives_tax() -> None:
+    assert AccountConfig(type="roth_ira").apply_tax is False
+    assert AccountConfig(type="nra_hk").apply_tax is False
+    assert AccountConfig(type="us_taxable").apply_tax is True  # the heavy-tax mode
+
+
+def test_account_default_is_tax_free() -> None:
+    cfg = load_config()
+    # config/account.yaml ships as roth_ira -> tax-free by default
+    assert cfg.account.type == "roth_ira"
+    assert cfg.account.apply_tax is False
+
+
+def test_account_rejects_unknown_type() -> None:
+    with pytest.raises(ValidationError):
+        AccountConfig(type="brokerage_xyz")
 
 
 def test_strategy_lookback_must_exceed_skip() -> None:

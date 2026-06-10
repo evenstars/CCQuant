@@ -21,3 +21,8 @@ execution:
   signal_price: close       # 月末收盘价算信号
   fill_price: next_open     # 次日开盘MOO执行
   total_return: true        # 复权/总收益口径
+
+costs:                      # 交易成本(IBKR分级费率默认)
+  commission_per_share: 0.0035
+  min_commission: 0.35
+  slippage_bps: 5.0         # 每边,按成交额bps

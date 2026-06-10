@@ -44,6 +44,14 @@ class ExecutionConfig(BaseModel):
     total_return: bool = True
 
 
+class CostConfig(BaseModel):
+    """Transaction-cost assumptions for the backtest (IBKR-tiered defaults)."""
+
+    commission_per_share: float = Field(0.0035, ge=0)
+    min_commission: float = Field(0.35, ge=0)
+    slippage_bps: float = Field(5.0, ge=0)  # per side, in basis points of trade value
+
+
 class StrategyConfig(BaseModel):
     universe: str = "SP500"
     lookback_months: int = Field(12, gt=0)
@@ -55,6 +63,7 @@ class StrategyConfig(BaseModel):
     ramp_in_tranches: int = Field(3, ge=1)
     liquidity: LiquidityConfig = Field(default_factory=LiquidityConfig)
     execution: ExecutionConfig = Field(default_factory=ExecutionConfig)
+    costs: CostConfig = Field(default_factory=CostConfig)
 
     @model_validator(mode="after")
     def _check_lookback(self) -> StrategyConfig:
@@ -67,6 +76,11 @@ class StrategyConfig(BaseModel):
 # Risk config (config/risk.yaml)
 # --------------------------------------------------------------------------- #
 class TaxConfig(BaseModel):
+    # Capital-gains rates for after-tax evaluation (combined federal + state).
+    # Defaults assume a high-tax state (NY/CA): short-term ~45%, long-term ~25%.
+    st_rate: float = Field(0.45, ge=0, le=1.0)  # short-term (<=365 days held)
+    lt_rate: float = Field(0.25, ge=0, le=1.0)  # long-term (>365 days held)
+    long_term_days: int = Field(365, gt=0)
     wash_sale_window_days: int = Field(30, ge=0)
     prefer_long_term: bool = True
     rank_buffer_enter: int = Field(15, gt=0)
@@ -113,11 +127,36 @@ class Secrets(BaseSettings):
 
 
 # --------------------------------------------------------------------------- #
+# Account (config/account.yaml) — the tax switch
+# --------------------------------------------------------------------------- #
+class AccountConfig(BaseModel):
+    """Which account the strategy runs in. Drives whether capital-gains tax applies.
+
+    - ``roth_ira``  : US tax-advantaged, fully tax-free -> no cap-gains tax, no
+                      dividend withholding. (Validation account.)
+    - ``us_taxable``: US taxable -> cap-gains tax applies (rates from risk.tax).
+                      THIS is the "pay heavy tax" mode.
+    - ``nra_hk``    : non-resident-alien HK account -> US cap-gains tax ~0, but
+                      dividends withheld (``dividend_drag_annual``).
+    """
+
+    type: Literal["roth_ira", "us_taxable", "nra_hk"] = "roth_ira"
+    # Annual dividend-withholding drag (fraction), used for nra_hk; 0 otherwise.
+    dividend_drag_annual: float = Field(0.0, ge=0, le=1.0)
+
+    @property
+    def apply_tax(self) -> bool:
+        """True only for US taxable accounts — the heavy-tax case."""
+        return self.type == "us_taxable"
+
+
+# --------------------------------------------------------------------------- #
 # Aggregate
 # --------------------------------------------------------------------------- #
 class AppConfig(BaseModel):
     strategy: StrategyConfig
     risk: RiskConfig
+    account: AccountConfig
     secrets: Secrets
 
 
@@ -134,11 +173,15 @@ def _load_yaml(path: Path) -> dict:
 def load_config(
     strategy_path: Path | None = None,
     risk_path: Path | None = None,
+    account_path: Path | None = None,
 ) -> AppConfig:
-    """Load and validate strategy + risk YAML and environment secrets."""
+    """Load and validate strategy + risk + account YAML and environment secrets."""
     strategy = StrategyConfig.model_validate(
         _load_yaml(strategy_path or paths.STRATEGY_CONFIG)
     )
     risk = RiskConfig.model_validate(_load_yaml(risk_path or paths.RISK_CONFIG))
+    # account.yaml is optional; defaults to a tax-free Roth IRA if absent.
+    apath = account_path or paths.ACCOUNT_CONFIG
+    account = AccountConfig.model_validate(_load_yaml(apath) if apath.exists() else {})
     secrets = Secrets()  # reads env / secrets.env
-    return AppConfig(strategy=strategy, risk=risk, secrets=secrets)
+    return AppConfig(strategy=strategy, risk=risk, account=account, secrets=secrets)

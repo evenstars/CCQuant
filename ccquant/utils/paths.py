@@ -19,6 +19,7 @@ LOG_DIR: Path = PROJECT_ROOT / "logs"
 
 STRATEGY_CONFIG: Path = CONFIG_DIR / "strategy.yaml"
 RISK_CONFIG: Path = CONFIG_DIR / "risk.yaml"
+ACCOUNT_CONFIG: Path = CONFIG_DIR / "account.yaml"
 SECRETS_ENV: Path = CONFIG_DIR / "secrets.env"
 
 

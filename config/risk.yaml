@@ -7,6 +7,9 @@ order_price_deviation_reject: 0.03 # 订单偏离参考价超过3%拒单
 vol_target_annual: null            # v1.1启用,如0.15
 
 tax:                               # 应税账户专属
+  st_rate: 0.45                    # 短期资本利得税率(联邦+州,NY/CA高税州)
+  lt_rate: 0.25                    # 长期资本利得税率
+  long_term_days: 365              # 持有超过此天数算长期
   wash_sale_window_days: 30        # 卖亏后禁止买回窗口
   prefer_long_term: true           # 优先卖出将转长期/亏损lot
   rank_buffer_enter: 15            # 进入名单需排名<=15

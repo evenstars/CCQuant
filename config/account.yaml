@@ -1,0 +1,8 @@
+# 账户类型开关 —— 决定是否对资本利得征税(是否交重税)
+#   roth_ira    : 免税验证账户。无资本利得税、无股息预扣。Gate 用税前口径。
+#   us_taxable  : 美国应税账户。启用资本利得税(税率见 risk.yaml 的 tax.st_rate/lt_rate)。←重税模式
+#   nra_hk      : 香港非居民外国人账户。资本利得对美≈0,但股息按 dividend_drag_annual 预扣。
+type: roth_ira
+
+# 仅 nra_hk 用:股息预扣年化拖累(约 股息率 × 预扣率,例如 1.2% × 30% ≈ 0.0036)
+dividend_drag_annual: 0.0

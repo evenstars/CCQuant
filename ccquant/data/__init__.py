@@ -8,9 +8,11 @@ from ccquant.data.panel import (
     sufficient_history_mask,
 )
 from ccquant.data.universe import (
+    HistoricalSP500Provider,
     SP500Provider,
     StaticUniverseProvider,
     UniverseProvider,
+    build_membership_mask,
 )
 
 __all__ = [
@@ -23,4 +25,6 @@ __all__ = [
     "UniverseProvider",
     "StaticUniverseProvider",
     "SP500Provider",
+    "HistoricalSP500Provider",
+    "build_membership_mask",
 ]

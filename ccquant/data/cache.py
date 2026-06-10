@@ -44,16 +44,27 @@ class DataCache:
 
     # -- DataFrame API ------------------------------------------------------ #
     def put_df(self, key: str, df: pd.DataFrame) -> Path:
-        path = self._path(key, ".parquet")
-        df.to_parquet(path)
-        _log.debug("cached df key=%s rows=%d -> %s", key, len(df), path.name)
+        """Store a DataFrame as Parquet, falling back to pickle if no Parquet engine."""
+        try:
+            path = self._path(key, ".parquet")
+            df.to_parquet(path)
+        except (ImportError, ValueError):
+            path = self._path(key, ".dfpkl")
+            df.to_pickle(path)
+            _log.debug("parquet unavailable; cached df as pickle -> %s", path.name)
         return path
 
     def get_df(self, key: str) -> pd.DataFrame | None:
-        path = self._path(key, ".parquet")
-        if not path.exists():
-            return None
-        return pd.read_parquet(path)
+        pq = self._path(key, ".parquet")
+        if pq.exists():
+            try:
+                return pd.read_parquet(pq)
+            except ImportError:
+                pass  # fall through to a pickle copy if one exists
+        pk = self._path(key, ".dfpkl")
+        if pk.exists():
+            return pd.read_pickle(pk)
+        return None
 
     # -- generic object API ------------------------------------------------- #
     def put_obj(self, key: str, obj: Any) -> Path:
@@ -71,7 +82,9 @@ class DataCache:
 
     # -- maintenance -------------------------------------------------------- #
     def has(self, key: str) -> bool:
-        return self._path(key, ".parquet").exists() or self._path(key, ".pkl").exists()
+        return any(
+            self._path(key, ext).exists() for ext in (".parquet", ".dfpkl", ".pkl")
+        )
 
     def clear(self) -> int:
         """Delete all cache files. Returns the number of files removed."""
